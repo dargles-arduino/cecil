@@ -9,7 +9,7 @@
 /* Program identification */ 
 #define PROG    "Cecil"
 #define VER     "1.0"
-#define BUILD   "06aug2021 @05:46h"
+#define BUILD   "06aug2021 @15:32h"
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -23,6 +23,7 @@ long int baudrate = 115200;     // Baudrate for serial output
 /* Global stuff that must happen outside setup() */
 flashscreen flash;
 sim40       sim;
+int values[] = {32,43,81,25,25,63,19,0,52};
 
 void setup() {
   // Start up the serial output port
@@ -33,9 +34,10 @@ void setup() {
   flash.message(PROG, VER, BUILD);
 
   // put your setup code here, to run once:
-  int values[] = {32,43,81};
-  sim.loadMem(4,values);
+  int valuesSize = (sizeof(values)/sizeof(values[0]));
+  if(!sim.loadMem(7,values, valuesSize)) Serial.println("Oops! Memory write failed");
   sim.displayMem(0,24);
+  sim.setStartVector(1023);
 }
 
 void loop() {

@@ -24,12 +24,12 @@
 
 typedef struct{
   int  acc;
-  int  xreg;
-  int  yreg;
-  int  progcounter;
-  bool zeroflag;
-  bool negflag;
-  bool carryflag;
+  int  xReg;
+  int  yReg;
+  int  progCounter;
+  bool zeroFlag;
+  bool negFlag;
+  bool carryFlag;
 } registers;
 
 class sim40
@@ -50,16 +50,22 @@ class sim40
    * loadMem uploads values into the sim40 memory.
    * @param int startAddress
    * @param array int values[]
+   * @return bool success
    */
-   bool loadMem(int startAddress, int values[]){
+   bool loadMem(int startAddress, int values[], int noOfEntries){
      bool success = true;
      // Check the parameters
-     int endAddress = startAddress + (sizeof(values)/sizeof(values[0]));
+     int endAddress = startAddress + noOfEntries - 1;
+     Serial.printf("endAddress is: %i\n", endAddress);
      if(startAddress<0 || endAddress>1023){
       success = false;
       return success;
      }
-     for(int i=startAddress;i<=endAddress;i++)memory[i]=values[i];
+     int arrayPtr = 0;
+     for(int i=startAddress;i<=endAddress;i++){
+      Serial.printf("Writing %i to memory\n", values[arrayPtr]);
+      memory[i]=values[arrayPtr++];
+     }
      return success;
    }
 
@@ -67,13 +73,15 @@ class sim40
    * displayMem
    * 
    * displayMem displays values in the sim40 memory.
-   * @param int startAddress
-   * @param int endAddress
+   * @param  int  startAddress
+   * @param  int  endAddress
+   * @return bool success
    */
    bool displayMem(int startAddress, int endAddress){
      bool success = true;
      // Check the parameters
      if(startAddress<0 || endAddress>1023 || startAddress>endAddress){
+      Serial.printf("Start or end address is out of range for memory write");
       success = false;
       return success;
      }
@@ -87,7 +95,24 @@ class sim40
        if(linecount++%10!=9)Serial.print(buff);      
        else Serial.println(buff);
      }
-     
+     return success;
+   }
+
+  /**
+   * setStartVector
+   * 
+   * Sets the startVector to the given value
+   * @param  int  address
+   * @return bool success
+   */
+   bool setStartVector(int address){
+     bool success = true;
+     if(address<0 || address>1023){
+      Serial.printf("\n!!StartVector out of range: %i\n", address);
+      success = false;
+      return success;
+     }
+     memory[1023] = address;
      return success;
    }
 };
