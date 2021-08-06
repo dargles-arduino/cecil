@@ -39,6 +39,7 @@ class sim40
   registers regs;
   
   public:
+  bool      running = false;
 
   // The constructor
   sim40(){
@@ -95,24 +96,91 @@ class sim40
        if(linecount++%10!=9)Serial.print(buff);      
        else Serial.println(buff);
      }
+     Serial.println();
      return success;
    }
 
-  /**
-   * setStartVector
-   * 
-   * Sets the startVector to the given value
-   * @param  int  address
-   * @return bool success
-   */
-   bool setStartVector(int address){
-     bool success = true;
-     if(address<0 || address>1023){
+ /**
+  * setStartVector
+  * 
+  * Sets the startVector to the given value
+  * @param  int  address
+  * @return bool success
+  */
+  bool setStartVector(int address){
+    bool success = true;
+    if(address<0 || address>1023){
       Serial.printf("\n!!StartVector out of range: %i\n", address);
       success = false;
       return success;
-     }
-     memory[1023] = address;
-     return success;
-   }
+    }
+    memory[1023] = address;
+    if(!running)regs.progCounter = address;
+    return success;
+  }
+
+ /**
+  * doInstruction
+  * 
+  * Actions the next instruction
+  */
+  void doInstruction(){
+    int instruction = memory[regs.progCounter++];
+    Serial.printf("Next instruction is %i\n", instruction);
+    switch(instruction){
+      case  0: //NOP - but stop for now!
+        //running=false;
+        break;
+      case  1: //load
+        regs.acc = memory[memory[regs.progCounter++]];
+        Serial.printf("Setting acc to %i\n",regs.acc);
+        break;
+      case  2: //store
+        memory[memory[regs.progCounter++]] = regs.acc;
+        break;
+      case  3: //add
+        regs.acc = regs.acc + memory[memory[regs.progCounter++]];
+        if(regs.carryFlag)regs.acc++;
+        if(regs.acc>1023){
+          regs.acc = regs.acc%1024;
+          regs.carryFlag = true;
+        }
+        Serial.printf("acc is now %i\n",regs.acc);
+        break;
+      case  4: //sub
+        regs.acc = regs.acc - memory[memory[regs.progCounter++]];
+        if(!regs.carryFlag)regs.acc++;
+        if(regs.acc<0){
+          regs.acc = regs.acc+1024;
+          regs.negFlag = true;
+        }
+        Serial.printf("acc is now %i\n",regs.acc);
+        break;
+      case  5: //and
+        break;
+      case  6: //or
+        break;
+      case 21: //print
+        Serial.print(regs.acc);
+        break;
+      case 32: //cset
+        regs.carryFlag=true;
+        break;
+      case 33: //cclear
+        regs.carryFlag=false;
+        break;
+      case 38: //stop
+        running=false;
+        break;
+      default:
+        //running=false;
+        break;
+    }
+    
+    if(regs.progCounter>1023){
+      Serial.println("!!Error: program counter overflow");
+      running=false;
+    }
+    return;
+  }
 };
