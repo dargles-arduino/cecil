@@ -40,6 +40,7 @@ class sim40
   
   public:
   bool      running = false;
+  bool      trace = true;
 
   // The constructor
   sim40(){
@@ -57,14 +58,14 @@ class sim40
      bool success = true;
      // Check the parameters
      int endAddress = startAddress + noOfEntries - 1;
-     Serial.printf("endAddress is: %i\n", endAddress);
+     if(trace)Serial.printf("endAddress is: %i\n", endAddress);
      if(startAddress<0 || endAddress>1023){
       success = false;
       return success;
      }
      int arrayPtr = 0;
      for(int i=startAddress;i<=endAddress;i++){
-      Serial.printf("Writing %i to memory\n", values[arrayPtr]);
+      if(trace)Serial.printf("Writing %i to memory\n", values[arrayPtr]);
       memory[i]=values[arrayPtr++];
      }
      return success;
@@ -100,6 +101,22 @@ class sim40
      return success;
    }
 
+  /**
+   * displayRegs
+   * 
+   * displayRegs displays values in the sim40 registers.
+   */
+   void displayRegs(){
+     Serial.printf("\nAccumulator:   %04d",regs.acc);
+     Serial.printf("\nX Register:    %04d",regs.xReg);
+     Serial.printf("\nX Register:    %04d",regs.yReg);
+     Serial.printf("\nProg Counter:  %04d",regs.progCounter);
+     Serial.printf("\nZero Flag:     %i",regs.zeroFlag);
+     Serial.printf("\nNegative Flag: %i",regs.negFlag);
+     Serial.printf("\nCarry Flag:    %i\n",regs.carryFlag);
+     return;
+   }
+   
  /**
   * setStartVector
   * 
@@ -126,17 +143,21 @@ class sim40
   */
   void doInstruction(){
     int instruction = memory[regs.progCounter++];
-    Serial.printf("Next instruction is %i\n", instruction);
+    if(trace)Serial.printf("Next instruction is %i\n", instruction);
     switch(instruction){
-      case  0: //NOP - but stop for now!
-        //running=false;
+      case  0: //NOP
         break;
       case  1: //load
         regs.acc = memory[memory[regs.progCounter++]];
-        Serial.printf("Setting acc to %i\n",regs.acc);
+        if(trace)Serial.printf("Setting acc to %i\n",regs.acc);
         break;
       case  2: //store
-        memory[memory[regs.progCounter++]] = regs.acc;
+        memory[memory[regs.progCounter]] = regs.acc;
+        if(trace){
+          Serial.printf("Storing %i in %i\n",regs.acc,memory[regs.progCounter]);
+          //Serial.printf("A: %i, PC: %i, memory[PC]: %i, memory[memory[PC]]: %i\n",regs.acc, regs.progCounter,memory[regs.progCounter],memory[memory[regs.progCounter]] );
+        }
+        regs.progCounter++;
         break;
       case  3: //add
         regs.acc = regs.acc + memory[memory[regs.progCounter++]];
@@ -145,20 +166,40 @@ class sim40
           regs.acc = regs.acc%1024;
           regs.carryFlag = true;
         }
-        Serial.printf("acc is now %i\n",regs.acc);
+        if(regs.acc==0)regs.zeroFlag=true;
+        if(trace)Serial.printf("acc is now %i\n",regs.acc);
         break;
       case  4: //sub
-        regs.acc = regs.acc - memory[memory[regs.progCounter++]];
-        if(!regs.carryFlag)regs.acc++;
-        if(regs.acc<0){
-          regs.acc = regs.acc+1024;
+        regs.acc = regs.acc + (memory[memory[regs.progCounter++]] ^ 1023) + regs.carryFlag;
+        if(regs.acc>1023){
+          regs.acc = regs.acc%1024;
+          regs.carryFlag = true;
+          regs.negFlag = false;
+        }
+        else{
+          regs.acc = (regs.acc ^ 1023) + 1;
+          regs.carryFlag = false;
           regs.negFlag = true;
         }
-        Serial.printf("acc is now %i\n",regs.acc);
+        if(regs.acc==0)regs.zeroFlag = true;
+        if(trace)Serial.printf("acc is now %i\n",regs.acc);
         break;
-      case  5: //and
+      case  5: //bitwise and (&)
+        regs.acc = regs.acc & memory[memory[regs.progCounter]];
+        if(trace)Serial.printf("A: %i, memory[PC]: %i, memory[memory[PC]]: %i\n", regs.acc,memory[regs.progCounter],memory[memory[regs.progCounter]]);
+        regs.progCounter++;
+        if(regs.acc==0)regs.zeroFlag=true;
+        else regs.zeroFlag=false;
         break;
-      case  6: //or
+      case  6: //bitwise or (|)
+        regs.acc = regs.acc | memory[memory[regs.progCounter++]];
+        if(regs.acc==0)regs.zeroFlag=true;
+        else regs.zeroFlag=false;
+        break;
+      case  7: //bitwise eor (^)
+        regs.acc = regs.acc ^ memory[memory[regs.progCounter++]];
+        if(regs.acc==0)regs.zeroFlag=true;
+        else regs.zeroFlag=false;
         break;
       case 21: //print
         Serial.print(regs.acc);
@@ -171,6 +212,9 @@ class sim40
         break;
       case 38: //stop
         running=false;
+        Serial.println("Program run concluded");
+        displayRegs();
+        displayMem(0,24);
         break;
       default:
         //running=false;
