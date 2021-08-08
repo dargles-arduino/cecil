@@ -1,15 +1,19 @@
 /**
  * Program: cecil
  * Purpose:
- *   Cecil is a simulation of an early teaching microcontroller. It has 1K of 
- *   10 bit wide memory and runs machine code.
+ *   CECIL is an assembly programming language which runs on a SIM40 
+ *   microcontroller. The SIM40 has 1K of 10 bit wide memory and runs 
+ *   machine code. Both the CECIL language and the SIM40 CPU are simplified
+ *   designs which are constructed to make learning the relevant concepts 
+ *   easier. Nevertheless, both CECIL and the SIM40 are sufficiently 
+ *   full designs that they are capable of being implemented in practice.
  * @author: David Argles, d.argles@gmx.com
  */
 
 /* Program identification */ 
 #define PROG    "Cecil"
 #define VER     "1.0"
-#define BUILD   "08aug2021 @18:00h"
+#define BUILD   "08aug2021 @22:47h"
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -23,7 +27,7 @@ long int baudrate = 115200;     // Baudrate for serial output
 /* Global stuff that must happen outside setup() */
 flashscreen flash;
 sim40       sim;
-int values[] = {1,10,32,4,11,10,8,38,21,38,20,20,0}; // Note: this is a program to add 2 nos.
+int values[] = {1,9,13,11,21,13,11,21,38,1020,1,33,3,10,23,0}; // Note: this is a program to add 2 nos.
 
 void setup() {
   // Start up the serial output port

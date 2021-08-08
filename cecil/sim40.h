@@ -9,10 +9,12 @@
  * @version 06Aug2021 05:53h
  */
  
+#define ANALOGUE_IN  904  // From ADC
+#define ANALOGUE_OUT 905  // To DAC
 #define TIMER        906
 #define STACK        908
-#define STACKSIZE    9
-#define STACKPTR     1007
+#define STACK_SIZE    9
+#define STACK_PTR     1007
 #define INT_V        1008
 #define INT_ENABLE   1009
 #define RANDOM_GEN   1010
@@ -43,13 +45,62 @@ class sim40
   registers regs;
   int       value;
   
+  
   public:
   bool      running = false;
   bool      trace = true;
 
   // The constructor
   sim40(){
+    memory[STACK_PTR] = STACK;
   }
+
+  /**
+   * stackPush
+   * 
+   * stackPush pushes values onto the sim40 stack.
+   * @param int value
+   * @return bool success
+   */
+   bool stackPush(int value){
+    if(memory[STACK_PTR]<(STACK+STACK_SIZE)){
+      if(trace){
+        Serial.printf("Pushing %i onto stack\n",value);
+        Serial.printf("Stack pointer is %i\n",memory[STACK_PTR]);
+      }
+      memory[memory[STACK_PTR]] = value;
+      memory[STACK_PTR]++;
+      if(trace)Serial.printf("Stack pointer is %i\n",memory[STACK_PTR]);
+    }
+    else{
+      Serial.println("Stack overflow\nRun terminated");
+      running = false;
+      return false;
+    }
+    return true;
+   }
+
+  /**
+   * stackPull
+   * 
+   * stackPull pulls values off the sim40 stack.
+   * @return int value
+   */
+   int stackPull(){
+    value = -1;
+    if(trace)Serial.printf("Stack pointer is %i\n",memory[STACK_PTR]);
+    if(memory[STACK_PTR]>(STACK)){
+      value = memory[memory[STACK_PTR]-1];
+      if(trace)Serial.printf("Pulling %i from stack\n",value);
+      memory[STACK_PTR]--;
+      if(trace)Serial.printf("Stack pointer is %i\n",memory[STACK_PTR]);
+    }
+    else{
+      Serial.println("Stack underflow\nRun terminated");
+      running = false;
+    }
+    return value;
+   }
 
   /**
    * loadMem
@@ -150,7 +201,8 @@ class sim40
     int instruction = memory[regs.progCounter++];
     if(trace)Serial.printf("Next instruction is %i\n", instruction);
     switch(instruction){
-      case  0: //NOP
+      case  0: //NOP - but uncomment for stop instead
+        //running = false;
         break;
       case  1: //load
         regs.acc = memory[memory[regs.progCounter++]];
@@ -228,8 +280,24 @@ class sim40
         if(regs.zeroFlag)regs.progCounter = memory[regs.progCounter++];
         else regs.progCounter++;
         break;
+      case  13: //jmptosr
+        // Get the jump address
+        value = memory[regs.progCounter++];
+        // Push the return address onto the stack
+        stackPush(regs.progCounter);
+        // point to the subroutine
+        regs.progCounter = value;
+        break;
+      case  14: //jicarry
+        if(regs.carryFlag)regs.progCounter = memory[regs.progCounter++];
+        else regs.progCounter++;
+        break;
       case 21: //print
         Serial.print(regs.acc);
+        break;
+      case 23: //return
+        // get the return address
+        regs.progCounter = stackPull();
         break;
       case 32: //cset
         regs.carryFlag=true;
