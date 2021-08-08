@@ -9,7 +9,7 @@
 /* Program identification */ 
 #define PROG    "Cecil"
 #define VER     "1.0"
-#define BUILD   "06aug2021 @18:12h"
+#define BUILD   "08aug2021 @18:00h"
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -23,7 +23,7 @@ long int baudrate = 115200;     // Baudrate for serial output
 /* Global stuff that must happen outside setup() */
 flashscreen flash;
 sim40       sim;
-int values[] = {1,8,7,9,21,2,10,38,7,20,0}; // Note: this is a program to add 2 nos.
+int values[] = {1,10,32,4,11,10,8,38,21,38,20,20,0}; // Note: this is a program to add 2 nos.
 
 void setup() {
   // Start up the serial output port

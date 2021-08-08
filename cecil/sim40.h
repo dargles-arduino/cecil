@@ -9,9 +9,13 @@
  * @version 06Aug2021 05:53h
  */
  
+#define TIMER        906
 #define STACK        908
 #define STACKSIZE    9
 #define STACKPTR     1007
+#define INT_V        1008
+#define INT_ENABLE   1009
+#define RANDOM_GEN   1010
 #define PITCH        1011
 #define DURATION     1012
 #define KEYB_IN      1013
@@ -37,6 +41,7 @@ class sim40
   private:
   int       memory[1023];
   registers regs;
+  int       value;
   
   public:
   bool      running = false;
@@ -200,6 +205,28 @@ class sim40
         regs.acc = regs.acc ^ memory[memory[regs.progCounter++]];
         if(regs.acc==0)regs.zeroFlag=true;
         else regs.zeroFlag=false;
+        break;
+      case  8: //jump
+        regs.progCounter = memory[regs.progCounter];
+        break;
+      case  9: //comp
+        value = regs.acc - memory[memory[regs.progCounter++]];
+        if(value==0)regs.zeroFlag = true;
+        else regs.zeroFlag = false;
+        if(value<0)regs.negFlag = true;
+        else regs.negFlag = false;
+        break;
+      case  10: //jineg
+        if(regs.negFlag)regs.progCounter = memory[regs.progCounter];
+        else regs.progCounter++;
+        break;
+      case  11: //jipos
+        if(!regs.negFlag)regs.progCounter = memory[regs.progCounter++];
+        else regs.progCounter++;
+        break;
+      case  12: //jizero
+        if(regs.zeroFlag)regs.progCounter = memory[regs.progCounter++];
+        else regs.progCounter++;
         break;
       case 21: //print
         Serial.print(regs.acc);
