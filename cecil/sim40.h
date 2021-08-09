@@ -13,8 +13,8 @@
 #define ANALOGUE_OUT 905  // To DAC
 #define TIMER        906
 #define STACK        908
-#define STACK_SIZE    9
-#define STACK_PTR     1007
+#define STACK_SIZE     9
+#define STACK_PTR    1007
 #define INT_V        1008
 #define INT_ENABLE   1009
 #define RANDOM_GEN   1010
@@ -291,6 +291,28 @@ class sim40
       case  14: //jicarry
         if(regs.carryFlag)regs.progCounter = memory[regs.progCounter++];
         else regs.progCounter++;
+        break;
+      case 15: //xload
+        regs.xReg = memory[memory[regs.progCounter++]];
+        if(trace)Serial.printf("Setting xReg to %i\n",regs.xReg);
+        break;
+      case 16: //xstore
+        memory[memory[regs.progCounter]] = regs.xReg;
+        if(trace){
+          Serial.printf("Storing %i in %i\n",regs.xReg,memory[regs.progCounter]);
+        }
+        regs.progCounter++;
+        break;
+      case 17: //loadmx
+        regs.acc = memory[memory[regs.progCounter++]+regs.xReg];
+        if(trace)Serial.printf("Setting acc to %i\n",regs.acc);
+        break;
+      case 18: //xcomp
+        value = regs.xReg - memory[memory[regs.progCounter++]];
+        if(value==0)regs.zeroFlag = true;
+        else regs.zeroFlag = false;
+        if(value<0)regs.negFlag = true;
+        else regs.negFlag = false;
         break;
       case 21: //print
         Serial.print(regs.acc);
