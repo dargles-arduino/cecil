@@ -44,6 +44,7 @@ class sim40
   int       memory[1023];
   registers regs;
   int       value;
+  char      item;
   
   
   public:
@@ -165,11 +166,13 @@ class sim40
    void displayRegs(){
      Serial.printf("\nAccumulator:   %04d",regs.acc);
      Serial.printf("\nX Register:    %04d",regs.xReg);
-     Serial.printf("\nX Register:    %04d",regs.yReg);
+     Serial.printf("\nY Register:    %04d",regs.yReg);
      Serial.printf("\nProg Counter:  %04d",regs.progCounter);
      Serial.printf("\nZero Flag:     %i",regs.zeroFlag);
      Serial.printf("\nNegative Flag: %i",regs.negFlag);
      Serial.printf("\nCarry Flag:    %i\n",regs.carryFlag);
+     Serial.println("Stack:");
+     displayMem(908,1007);
      return;
    }
    
@@ -201,8 +204,11 @@ class sim40
     int instruction = memory[regs.progCounter++];
     if(trace)Serial.printf("Next instruction is %i\n", instruction);
     switch(instruction){
-      case  0: //NOP - but uncomment for stop instead
-        //running = false;
+      case  0: //stop
+        running=false;
+        Serial.println("Program run concluded");
+        displayRegs();
+        displayMem(0,24);
         break;
       case  1: //load
         regs.acc = memory[memory[regs.progCounter++]];
@@ -273,11 +279,11 @@ class sim40
         else regs.progCounter++;
         break;
       case  11: //jipos
-        if(!regs.negFlag)regs.progCounter = memory[regs.progCounter++];
+        if(!regs.negFlag)regs.progCounter = memory[regs.progCounter];
         else regs.progCounter++;
         break;
       case  12: //jizero
-        if(regs.zeroFlag)regs.progCounter = memory[regs.progCounter++];
+        if(regs.zeroFlag)regs.progCounter = memory[regs.progCounter];
         else regs.progCounter++;
         break;
       case  13: //jmptosr
@@ -289,7 +295,7 @@ class sim40
         regs.progCounter = value;
         break;
       case  14: //jicarry
-        if(regs.carryFlag)regs.progCounter = memory[regs.progCounter++];
+        if(regs.carryFlag)regs.progCounter = memory[regs.progCounter];
         else regs.progCounter++;
         break;
       case 15: //xload
@@ -314,12 +320,60 @@ class sim40
         if(value<0)regs.negFlag = true;
         else regs.negFlag = false;
         break;
-      case 21: //print
-        Serial.print(regs.acc);
+      case 19: //yload
+        regs.yReg = memory[memory[regs.progCounter++]];
+        if(trace)Serial.printf("Setting yReg to %i\n",regs.yReg);
+        break;
+      case 20: //ystore
+        memory[memory[regs.progCounter]] = regs.yReg;
+        if(trace){
+          Serial.printf("Storing %i in %i\n",regs.yReg,memory[regs.progCounter]);
+        }
+        regs.progCounter++;
+        break;
+      case 21: //pause
+        value = memory[memory[regs.progCounter++]] * 50;
+        delay(value);
+        break;
+      case 22: //printd
+        value = memory[memory[regs.progCounter]] + (memory[memory[regs.progCounter++]+1]*1024);
+        Serial.print(value);
         break;
       case 23: //return
         // get the return address
         regs.progCounter = stackPull();
+        break;
+      case 24: //push
+        stackPush(regs.acc);
+        break;
+      case 25: //pull
+        regs.acc = stackPull();
+        break;
+      case 26: //xpush
+        stackPush(regs.xReg);
+        break;
+      case 27: //xpull
+        regs.xReg = stackPull();
+        break;
+      case 28: //xinc
+        regs.xReg++;
+        if(regs.xReg==0)regs.zeroFlag = true;
+        else regs.zeroFlag = false;
+        if(regs.xReg>1023){
+          regs.carryFlag = true;
+          regs.xReg = regs.xReg%1024;
+        }
+        else regs.carryFlag = false;
+        break;
+      case 29: //xdec
+        regs.xReg--;
+        if(regs.xReg==0)regs.zeroFlag = true;
+        else regs.zeroFlag = false;
+        if(regs.xReg<0){
+          regs.negFlag = true;
+          regs.xReg = regs.xReg + 1024;
+        }
+        else regs.negFlag = false;
         break;
       case 32: //cset
         regs.carryFlag=true;
@@ -327,11 +381,15 @@ class sim40
       case 33: //cclear
         regs.carryFlag=false;
         break;
-      case 38: //stop
-        running=false;
-        Serial.println("Program run concluded");
-        displayRegs();
-        displayMem(0,24);
+      case 38: //print
+        Serial.print(regs.acc);
+        break;
+      case 39: //printch
+        item = regs.acc;
+        Serial.print(item);
+        break;
+      case 50: //NOP - but uncomment for stop instead
+        //running = false;
         break;
       default:
         //running=false;
