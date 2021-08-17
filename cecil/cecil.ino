@@ -27,7 +27,7 @@ long int baudrate = 115200;     // Baudrate for serial output
 /* Global stuff that must happen outside setup() */
 flashscreen flash;
 sim40       sim;
-int values[] = {15,11,26,25,0,38,0,2,38,5,3,65,65,66,23,0}; // Note: this is a program to add 2 nos.
+int values[] = {1,11,37,32,31,37,0,2,38,5,3,523,65,66,23,0}; // Note: this is a program to add 2 nos.
 
 void setup() {
   // Start up the serial output port

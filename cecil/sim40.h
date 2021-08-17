@@ -375,11 +375,33 @@ class sim40
         }
         else regs.negFlag = false;
         break;
+      case 30: //lshift
+        regs.acc = (regs.acc * 2) + regs.carryFlag;
+        if(regs.acc>1023){
+          regs.acc = regs.acc%1024;
+          regs.carryFlag = true;
+        }
+        else regs.carryFlag = false;
+        break;
+      case 31: //rshift
+        if(regs.acc & 1){
+          value = 1;
+          regs.acc--;
+        }
+        else value = 0;     // value holds the LSB which will become the carry flag
+        regs.acc = regs.acc/2;
+        if(regs.carryFlag) regs.acc = regs.acc + 512; // Set the MSB
+        if(value==1) regs.carryFlag = true;
+        else regs.carryFlag = false;
+        break;
       case 32: //cset
         regs.carryFlag=true;
         break;
       case 33: //cclear
         regs.carryFlag=false;
+        break;
+      case 37: //printb
+        Serial.print(regs.acc, BIN);
         break;
       case 38: //print
         Serial.print(regs.acc);
