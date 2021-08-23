@@ -18,6 +18,7 @@
 /* Necessary includes */
 #include "flashscreen.h"
 #include "sim40.h"
+#include "webserver.h"
 
 /* Global "defines" - may have to look like variables because of type */
 long int baudrate = 115200;     // Baudrate for serial output
@@ -27,6 +28,7 @@ long int baudrate = 115200;     // Baudrate for serial output
 /* Global stuff that must happen outside setup() */
 flashscreen flash;
 sim40       sim;
+webserver   www;
 int values[] = {1,11,37,32,31,37,0,2,38,5,3,523,65,66,23,0}; // Note: this is a program to add 2 nos.
 
 void setup() {
@@ -36,6 +38,7 @@ void setup() {
 
   // Send program details to serial output
   flash.message(PROG, VER, BUILD);
+  www.begin();
 
   // put your setup code here, to run once:
   int valuesSize = (sizeof(values)/sizeof(values[0]));
@@ -48,5 +51,6 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   if(sim.running)sim.doInstruction();
+  if(www.live)www.servePage("Blah");
   delay(1000);
 }
