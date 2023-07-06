@@ -23,12 +23,17 @@ class compiler
   int     errors;
   String  input;
   String  output = "";
-  String  instructions[40]={"stop","load","store","add","sub","and","or","eor","jump","comp",
+  String  instructions[51]={"stop","load","store","add","sub","and","or","eor","jump","comp",
     "jineg","jipos","jizero","jmptosr","jicarry","xload","xstore","loadmx","xcomp","yload",
     "ystore","pause","printd","return","push","pull","xpush","xpull","xinc","xdec",
-    "lshift","rshift","cset","cclear","getkey","wait","retfint","printb","print","printch"};
-  int     takesData[40] = {0,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,
-    1,1,1,0,0,0,0,0,0,0, 0,0,0,0,0,1,0,0,0,0};
+    "lshift","rshift","cset","cclear","getkey","wait","retfint","printb","print","printch",
+    "ypush","ypull","yinc","ydec","swapax","swapay","swapxy","swapas","intenable","intdisable",
+    "nop"};
+  int     takesData[51] = {0,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,
+    1,1,1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0};
+  String  labelNames[];
+  int     labelLocs[];
+  int     labelPtr;
 
   // The constructor
   compiler(){
@@ -98,16 +103,28 @@ class compiler
     return value;
   }
 
+  int lookupLabel(String label){
+    int value = -1;
+    int i = 0;
+    while(value==-1 && i<labelPtr){
+      if(labelNames[i]==label)value=labelLocs[i];
+    }
+    return value;
+  }
+
   int getData(){
     int location = -1;
     String nextWord;
     nextWord = getWord();
     output += "Data found: "+nextWord+"\n";
+    location = lookupLabel(nextWord);
+    if(location==-1)compileError("Label not found");
     return location;
   }
 
   bool compile(){
     input = program;
+    labelPtr = 0;   // i.e. reset the label table
     output = "Starting compiler...\n";
     String next;
     bool success = true;
@@ -137,6 +154,9 @@ class compiler
       // Check for a label
       if(next.startsWith(".")){
         output+="Label found: "+next+"\n";
+        // Enter the label into the table
+        labelNames[labelPtr] = next;
+        labelLocs[labelPtr++] = pointer;
         next = getWord();
       }
       // We should now have a command
