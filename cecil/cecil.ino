@@ -14,12 +14,13 @@
 /* Program identification */ 
 #define PROG    "Cecil"
 #define VER     "1.0"
-#define BUILD   "07jul2023 @00:19h"
+#define BUILD   "10jul2023 @13:57h"
 
 /* Necessary includes */
 #include "flashscreen.h"
 #include <WiFiManager.h> // See https://github.com/tzapu/WiFiManager
 #include "sim40.h"
+#include "compiler.h"
 #include "webServer.h"
 
 /* Global "defines" - may have to look like variables because of type */
@@ -31,8 +32,12 @@ long int baudrate = 115200;     // Baudrate for serial output
 bool        InetConnected;
 WiFiServer  server(80);
 WiFiClient  client;
+String      simStatus = "halted"; // halted/compiling/running
+String      prevStatus = "halted";
 sim40       sim;
-int values[] = {1,11,37,32,31,37,0,2,38,5,3,523,65,66,23,0}; // Note: this is a program to add 2 nos.
+compiler    Compiler;
+int         values[] = {1,11,37,32,31,37,0,2,38,5,3,523,65,66,23,0}; // Note: this is a program to add 2 nos.
+int         valuesSize;
 
 void setup() {
   // Start up the serial output port
@@ -58,21 +63,32 @@ void setup() {
   }
 
   // put your setup code here, to run once:
-  int valuesSize = (sizeof(values)/sizeof(values[0]));
+  valuesSize = (sizeof(values)/sizeof(values[0]));
   if(!sim.loadMem(0,values, valuesSize)) Serial.println("Oops! Memory write failed");
-  sim.displayMem(0,24);
+  Serial.println(sim.displayMem(0,valuesSize));
   sim.setStartVector(0);
   sim.running=true;
+  simStatus = "running";
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  if(simStatus != prevStatus){
+    Serial.println("Sim status: "+simStatus);
+    prevStatus = simStatus;
+  }
+  
   // check for incoming web clients
   client = server.available();
-  if(client) serviceWebRequest(client);
+  if(client) {
+    String memDump = sim.displayMem(0, 24);
+    simStatus = serviceWebRequest(client, Compiler.program, memDump, simStatus);
+  }
 
-  if(sim.running)sim.doInstruction();
+  if(sim.running){
+    sim.doInstruction();
+    if(!sim.running)simStatus = "halted";
+  }
 
   delay(100);
 }

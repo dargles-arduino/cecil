@@ -50,6 +50,7 @@ class sim40
   public:
   bool      running = false;
   bool      trace = true;
+  String    output = "";
 
   // The constructor
   sim40(){
@@ -134,28 +135,31 @@ class sim40
    * displayMem displays values in the sim40 memory.
    * @param  int  startAddress
    * @param  int  endAddress
-   * @return bool success
+   * @return String memory (memory contents)
    */
-   bool displayMem(int startAddress, int endAddress){
-     bool success = true;
+   String displayMem(int startAddress, int endAddress){
+     String result = "";
      // Check the parameters
      if(startAddress<0 || endAddress>1023 || startAddress>endAddress){
-      Serial.printf("Start or end address is out of range for memory write");
-      success = false;
-      return success;
+      result = "Start or end address is out of range for memory access";
+      return result;
      }
      // We're clear to go
      int  pointer = startAddress;
      int  counter = 0;
-     char buff[5];
+     /*char buff[5];
      int  linecount = 0;
      while(pointer<=endAddress){
-       sprintf(buff," %04d", memory[pointer++]);
-       if(linecount++%10!=9)Serial.print(buff);      
-       else Serial.println(buff);
+       sprintf(buff," %04d", memory[pointer]);
+       Serial.print(buff);
+       result += " " + memory[pointer++];
+       if(linecount++%10==9){
+        result += "\n";
+        Serial.println();
+       }
      }
-     Serial.println();
-     return success;
+     result += "\n";*/
+     return "[memory dump]";//result;
    }
 
   /**
@@ -172,7 +176,7 @@ class sim40
      Serial.printf("\nNegative Flag: %i",regs.negFlag);
      Serial.printf("\nCarry Flag:    %i\n",regs.carryFlag);
      Serial.println("Stack:");
-     displayMem(908,1007);
+     //Serial.println(displayMem(908,1007));
      return;
    }
    
@@ -208,7 +212,8 @@ class sim40
         running=false;
         Serial.println("Program run concluded");
         displayRegs();
-        displayMem(0,24);
+        Serial.println("Program memory: ");
+        Serial.println(displayMem(0,24));
         break;
       case  1: //load
         regs.acc = memory[memory[regs.progCounter++]];
@@ -220,6 +225,7 @@ class sim40
           Serial.printf("Storing %i in %i\n",regs.acc,memory[regs.progCounter]);
           //Serial.printf("A: %i, PC: %i, memory[PC]: %i, memory[memory[PC]]: %i\n",regs.acc, regs.progCounter,memory[regs.progCounter],memory[memory[regs.progCounter]] );
         }
+        if(memory[regs.progCounter]==1015)output += regs.acc; // video out
         regs.progCounter++;
         break;
       case  3: //add
@@ -338,6 +344,7 @@ class sim40
       case 22: //printd
         value = memory[memory[regs.progCounter]] + (memory[memory[regs.progCounter++]+1]*1024);
         Serial.print(value);
+        output += value;
         break;
       case 23: //return
         // get the return address
@@ -402,13 +409,16 @@ class sim40
         break;
       case 37: //printb
         Serial.print(regs.acc, BIN);
+        //output += regs.acc;
         break;
       case 38: //print
         Serial.print(regs.acc);
+        output += regs.acc;
         break;
       case 39: //printch
         item = regs.acc;
         Serial.print(item);
+        output += item;
         break;
       case 50: //NOP - but uncomment for stop instead
         //running = false;
