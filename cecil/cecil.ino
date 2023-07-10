@@ -14,7 +14,7 @@
 /* Program identification */ 
 #define PROG    "Cecil"
 #define VER     "1.0"
-#define BUILD   "10jul2023 @13:57h"
+#define BUILD   "10jul2023 @16:45h"
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -81,10 +81,20 @@ void loop() {
   // check for incoming web clients
   client = server.available();
   if(client) {
-    String memDump = sim.displayMem(0, 24);
-    simStatus = serviceWebRequest(client, Compiler.program, memDump, simStatus);
+    String memDump = sim.displayMem(0, Compiler.endLoc);
+    simStatus = serviceWebRequest(client, Compiler.program, memDump, sim.output, simStatus);
   }
 
+  if(simStatus=="compiling"){
+    if(Compiler.compile()){
+      // Compilation was successful
+      Serial.println("Compiled successfully");
+      if(!sim.loadMem(Compiler.startLoc, Compiler.code , Compiler.endLoc)) Serial.println("Oops! Memory write failed");
+      sim.output += Compiler.output;
+    }
+    else Serial.println("Failed to compile");
+    simStatus = "halted";
+  }
   if(sim.running){
     sim.doInstruction();
     if(!sim.running)simStatus = "halted";

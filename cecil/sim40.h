@@ -138,6 +138,7 @@ class sim40
    * @return String memory (memory contents)
    */
    String displayMem(int startAddress, int endAddress){
+     //Serial.println("Entering display dump routine");
      String result = "";
      // Check the parameters
      if(startAddress<0 || endAddress>1023 || startAddress>endAddress){
@@ -147,19 +148,22 @@ class sim40
      // We're clear to go
      int  pointer = startAddress;
      int  counter = 0;
-     /*char buff[5];
-     int  linecount = 0;
+     char buff[5];
+     int  itemsOnLine = 0;
      while(pointer<=endAddress){
-       sprintf(buff," %04d", memory[pointer]);
-       Serial.print(buff);
-       result += " " + memory[pointer++];
-       if(linecount++%10==9){
+       sprintf(buff," %04d", memory[pointer++]);
+       //Serial.print("Adding next memory content: ");
+       //Serial.println(memory[pointer]);
+       result += " ";
+       result += buff;
+       //for(int i=0;i<5;i++)result += buff[i];
+       if(itemsOnLine++%10==9){
         result += "\n";
-        Serial.println();
+        //Serial.println();
        }
      }
-     result += "\n";*/
-     return "[memory dump]";//result;
+     result += "\n";
+     return result; //"[memory dump]";//
    }
 
   /**
@@ -409,7 +413,7 @@ class sim40
         break;
       case 37: //printb
         Serial.print(regs.acc, BIN);
-        //output += regs.acc;
+        output += regs.acc;
         break;
       case 38: //print
         Serial.print(regs.acc);

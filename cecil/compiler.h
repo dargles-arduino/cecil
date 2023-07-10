@@ -31,9 +31,11 @@ class compiler
     "nop"};
   int     takesData[51] = {0,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,
     1,1,1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0};
-  String  labelNames[];
-  int     labelLocs[];
-  int     labelPtr;
+  String  labelNames[50];
+  int     labelLocs[50];
+  int     labelPtr = 0;
+  int     startLoc = 0;
+  int     endLoc = 0;
 
   // The constructor
   compiler(){
@@ -106,32 +108,51 @@ class compiler
   int lookupLabel(String label){
     int value = -1;
     int i = 0;
-    while(value==-1 && i<labelPtr){
-      if(labelNames[i]==label)value=labelLocs[i];
+    if(labelPtr!=0){
+      while((value==-1) && (i<labelPtr)){
+        if(labelNames[i]==label)value=labelLocs[i];
+        i++;
+      }
     }
+    Serial.println(value);
     return value;
   }
 
   int getData(){
     int location = -1;
     String nextWord;
+    //Serial.println("Looking for data field");
     nextWord = getWord();
-    output += "Data found: "+nextWord+"\n";
+    output += "Data field found: " + nextWord + ", ";
     location = lookupLabel(nextWord);
-    if(location==-1)compileError("Label not found");
+    if(location==-1){
+      compileError("location not found\n");
+      //output += "location not found";
+    }
+    else output += "location: " + String(location) + "\n";
     return location;
   }
 
   bool compile(){
     input = program;
     labelPtr = 0;   // i.e. reset the label table
-    output = "Starting compiler...\n";
+    output = "\n===\nStarting compiler...\n";
     String next;
+    String nextOne = "";
     bool success = true;
     compiled = false;
+    int   instruction;
+
+   for(int pass=1;pass<3;pass++){
+    if(pass == 2){
+      output += "---\nErrors found, beginning second pass\n";
+      input = program;
+      errors = 0;
+      success = true;
+    }
+
     errors = 0;
     pointer = 0;
-    int   instruction;
 
     // First, replace all (other) whitespace chars with spaces
     input.replace("\t"," "); // tabs
@@ -139,48 +160,74 @@ class compiler
     // ---Check the headers---
     String keywords[] = {"program","author","date"};
     for(int ptr=0;ptr<3;ptr++){
-      next = getWord();
-      if(next!=keywords[ptr])compileError("Missing"+keywords[ptr]+"declaration\n");
+      nextOne = getWord();
+      if(nextOne!=keywords[ptr])compileError("Missing"+keywords[ptr]+"declaration\n");
       else{
-        next = getRestOfLine();
-        output += "Found "+keywords[ptr]+": " + next + "\n";
+        nextOne = getRestOfLine();
+        output += "Found "+keywords[ptr]+": " + nextOne + "\n";
       }
     }
 
     // ---Now compile the program---
     while(input.length()>0){
       // While there's text left, compile next command
-      next = getWord();
+      nextOne = getWord();
+      if(nextOne == "") break;
       // Check for a label
-      if(next.startsWith(".")){
-        output+="Label found: "+next+"\n";
+      if(nextOne.startsWith(".")){
+        nextOne = nextOne.substring(1,nextOne.length());
+        //Serial.println("Label found: " + nextOne + ", location: ");
+        output += "Label found: " + nextOne + ", location: ";
+        output += String(pointer);
+        output += "\n";
         // Enter the label into the table
-        labelNames[labelPtr] = next;
+        labelNames[labelPtr] = nextOne;
         labelLocs[labelPtr++] = pointer;
-        next = getWord();
+        nextOne = getWord();
       }
       // We should now have a command
-      instruction = decypher(next);
-      if(instruction==-1){
-        compileError("Unknown instruction: "+next+"\n");
+      //Serial.print("Instruction found: " + nextOne + ", code: ");
+      if(nextOne == "insert"){
+        String temp = getWord();
+        int b = temp.toInt();
+        Serial.print("insert field: ");
+        Serial.println(b);
+        code[pointer++] = b;
+        //code{pointer++] = b;
       }
+      /*if(nextOne == "insert"){
+        code{pointer++] = 20; //toInt(getWord());
+      }*/
       else{
-        output+="Instruction found: "+next+"\n";
-        code[pointer++]=instruction;
-      }
-      // Now check for a data field
-      if(instruction!=-1 && takesData[instruction]){
-        // Current command takes a data field, deal with it
-        code[pointer++]=getData();
+        instruction = decypher(nextOne);
+        //Serial.println(instruction);
+        if(instruction==-1){
+          compileError("Unknown instruction: "+nextOne+"\n");
+        }
+        else{
+          output+="Instruction found: "+nextOne+"\n";
+          code[pointer++]=instruction;
+        }
+        // Now check for a data field
+        if(instruction!=-1 && takesData[instruction]){
+          // Current command takes a data field, deal with it
+          code[pointer++]=getData();
+        }
       }
     }
     // ---Finish off---
     if(errors>0) success = false;
-    if(success)compiled = true;
+    if(success){
+      compiled = true;
+      pass = 2;
+    }
+   }
     //int val = pointer-1;
+    endLoc = pointer;
     output += "There are "+String(pointer)+" memory locations of code\n";
     output += "Code block is:\n";
     for(int i=0;i<pointer;i++)output += String(code[i])+" ";
+    Serial.println("===\nOutput:\n" + output); // TRACE   
     return(success);
-  }
+ }
 };

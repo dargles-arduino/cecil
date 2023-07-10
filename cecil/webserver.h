@@ -8,7 +8,7 @@
  * @param   WiFiClient  client  The incoming WiFi client
  */
 
-void sendHead(WiFiClient client, String program, String memory, String simStatus)
+void sendHead(WiFiClient client, String program, String memory, String videoOutput, String simStatus)
 {
   // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
   // and a content-type so the client knows what's coming, then a blank line:
@@ -41,15 +41,19 @@ void sendHead(WiFiClient client, String program, String memory, String simStatus
   client.println("      <pre><textarea name=\"code\" rows=\"5\" cols=\"60\">");
   client.println(memory);
   client.println("      </textarea></pre>");
-  if(simStatus == "halted"){
-    client.println("      <form action=\"run\" method=\"get\">");
-    client.println("        <input type=\"submit\" value=\"Run\">");
-  }
-  else{
+  if(simStatus != "halted"){
     client.println("      <form action=\"halt\" method=\"get\">");
     client.println("        <input type=\"submit\" value=\"Halt\">");
   }
+  else{
+    client.println("      <form action=\"run\" method=\"get\">");
+    client.println("        <input type=\"submit\" value=\"Run\">");
+  }
   client.println("      </form>");
+  client.println("      <h2>Video Output</h2>");
+  client.println("      <pre><textarea name=\"output\" rows=\"15\" cols=\"60\">");
+  client.println(videoOutput);
+  client.println("      </textarea></pre>");
   client.println("    </section>");
   return;
 }
@@ -62,21 +66,23 @@ void sendTail(WiFiClient client)
   return;
 }
 
-String serviceWebRequest(WiFiClient client, String program, String memory, String simStatus)
+String serviceWebRequest(WiFiClient client, String program, String memory, String videoOutput, String simStatus)
 {
     Serial.print("New Client: ");           // print a message out the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
     while (client.connected()) {            // loop while the client's connected
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
-        // Serial.write(c);                    // print it out the serial monitor
+        //Serial.write(c);                    // print it out the serial monitor
         if (c == '\n') {                    // if the byte is a newline character
+
+          if (currentLine.startsWith("Referer:"))Serial.println("Requesting "+ currentLine);
 
           // if the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
             // Send the headers
-            sendHead(client, program, memory, simStatus);
+            sendHead(client, program, memory, videoOutput, simStatus);
             // the content of the HTTP response follows the header:
             client.print("Click <a href=\"/H\">here</a> to turn the LED on pin 5 on.<br>");
             client.print("Click <a href=\"/L\">here</a> to turn the LED on pin 5 off.<br>");
@@ -92,7 +98,6 @@ String serviceWebRequest(WiFiClient client, String program, String memory, Strin
           currentLine += c;      // add it to the end of the currentLine
         }
 
-        if (currentLine.startsWith("Requester"))Serial.println("Requesting "+ currentLine);
         // Check to see if the client request was "GET /H" or "GET /L":
         if (currentLine.endsWith("GET /compile")) {
           Serial.println("Starting compilation");
