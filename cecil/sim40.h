@@ -154,10 +154,10 @@ class sim40
        sprintf(buff," %04d", memory[pointer++]);
        //Serial.print("Adding next memory content: ");
        //Serial.println(memory[pointer]);
-       result += " ";
+       //result += " ";
        result += buff;
        //for(int i=0;i<5;i++)result += buff[i];
-       if(itemsOnLine++%10==9){
+       if(itemsOnLine++%8==7){
         result += "\n";
         //Serial.println();
        }

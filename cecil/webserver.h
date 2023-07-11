@@ -41,20 +41,20 @@ void sendHead(WiFiClient client, String program, String memory, String videoOutp
   line = line + PROG + "</title>";
   client.println(line);
   client.println("  </head>");
-  client.println("  <body>");
+  client.println("  <body font=\"Arial\" bgcolor=\"cyan\">");
   client.println("    <h1>CECIL</h1>");
   client.println("    <section>");
   client.println("      <h2>Program</h2>");
   client.println("      <form action=\"compile\" method=\"get\">");
-  client.println("        <pre><textarea name=\"program\" rows=\"15\" cols=\"60\">");
+  client.println("        <pre><textarea name=\"program\" rows=\"15\" cols=\"48\">");
   client.println(program);
   client.println("        </textarea></pre>");
   client.println("        <input type=\"submit\" value=\"Compile\">");
   client.println("      </form>");
   client.println("    </section>");
   client.println("    <section>");
-  client.println("      <h2>Object Code</h2>");
-  client.println("      <pre><textarea name=\"code\" rows=\"5\" cols=\"60\">");
+  client.println("      <h2>Memory</h2>");
+  client.println("      <pre><textarea name=\"code\" rows=\"5\" cols=\"48\">");
   client.println(memory);
   client.println("      </textarea></pre>");
   if(simStatus != "halted"){
@@ -67,7 +67,7 @@ void sendHead(WiFiClient client, String program, String memory, String videoOutp
   }
   client.println("      </form>");
   client.println("      <h2>Video Output</h2>");
-  client.println("      <pre><textarea name=\"output\" rows=\"15\" cols=\"60\">");
+  client.println("      <pre><textarea name=\"output\" rows=\"15\" cols=\"48\">");
   client.println(videoOutput);
   client.println("      </textarea></pre>");
   client.println("    </section>");
