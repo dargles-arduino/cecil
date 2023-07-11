@@ -14,7 +14,7 @@
 /* Program identification */ 
 #define PROG    "Cecil"
 #define VER     "1.0"
-#define BUILD   "10jul2023 @16:45h"
+#define BUILD   "11jul2023 @17:08h"
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -86,6 +86,9 @@ void loop() {
   }
 
   if(simStatus=="compiling"){
+    //Serial.println("Updated program is:");
+    //Serial.println(progUpdate);
+    Compiler.program = progUpdate;
     if(Compiler.compile()){
       // Compilation was successful
       Serial.println("Compiled successfully");

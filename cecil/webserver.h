@@ -8,6 +8,22 @@
  * @param   WiFiClient  client  The incoming WiFi client
  */
 
+String  progUpdate = "";
+
+void tidyProgram(String program){
+  int ptr;
+  // Cut the front of the GET line
+  ptr = program.indexOf("?program=") + 9;
+  progUpdate = program.substring(ptr, program.length()); //program.indexOf(terminator);
+  // Now replace "+" chars with tabs
+  progUpdate.replace("+", " "); 
+  progUpdate.replace("%0D%0A", "\n"); 
+  progUpdate.replace("%3B", ";");
+  progUpdate = progUpdate.substring(0,progUpdate.indexOf("HTTP/"));
+  //Serial.println(progUpdate);
+  return;
+}
+
 void sendHead(WiFiClient client, String program, String memory, String videoOutput, String simStatus)
 {
   // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
@@ -77,7 +93,8 @@ String serviceWebRequest(WiFiClient client, String program, String memory, Strin
         if (c == '\n') {                    // if the byte is a newline character
 
           if (currentLine.startsWith("Referer:"))Serial.println("Requesting "+ currentLine);
-
+          if (currentLine.startsWith("GET /compile?program="))tidyProgram(currentLine);
+//Serial.println(currentLine);
           // if the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
@@ -101,6 +118,7 @@ String serviceWebRequest(WiFiClient client, String program, String memory, Strin
         // Check to see if the client request was "GET /H" or "GET /L":
         if (currentLine.endsWith("GET /compile")) {
           Serial.println("Starting compilation");
+          tidyProgram(currentLine);
           simStatus = "compiling";
         }
         if (currentLine.endsWith("GET /run")) {
