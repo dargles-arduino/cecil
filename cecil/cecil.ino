@@ -14,7 +14,7 @@
 /* Program identification */ 
 #define PROG    "Cecil"
 #define VER     "1.0"
-#define BUILD   "11jul2023 @19:04h"
+#define BUILD   "12jul2023 @10:23h"
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -32,7 +32,7 @@ long int baudrate = 115200;     // Baudrate for serial output
 bool        InetConnected;
 WiFiServer  server(80);
 WiFiClient  client;
-String      simStatus = "halted"; // halted/compiling/running
+String      simStatus = "halted"; // halted/compiling/running; can be clear temporarily, just to get the info around
 String      prevStatus = "halted";
 sim40       sim;
 compiler    Compiler;
@@ -97,6 +97,10 @@ void loop() {
     }
     else Serial.println("Failed to compile");
     simStatus = "halted";
+  }
+  if(simStatus=="clear"){
+    sim.output = "";
+    simStatus = prevStatus;
   }
   if(sim.running){
     sim.doInstruction();

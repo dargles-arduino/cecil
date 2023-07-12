@@ -24,13 +24,19 @@ void tidyProgram(String program){
   return;
 }
 
-void sendHead(WiFiClient client, String program, String memory, String videoOutput, String simStatus)
-{
+/**
+ * sendHead()
+ * 
+ * Sends the HTTP headers and initial HTML that applies for any page we might 
+ * wish to return to the requester.
+ */
+void sendHead(WiFiClient client, String simStatus){
   // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
   // and a content-type so the client knows what's coming, then a blank line:
   client.println("HTTP/1.1 200 OK");
   client.println("Content-type:text/html");
   client.println();
+  
   // Now send the initial HTML
   client.println("<!DOCTYPE html>");
   client.println("<html lang=\"en\">");
@@ -41,8 +47,19 @@ void sendHead(WiFiClient client, String program, String memory, String videoOutp
   line = line + PROG + "</title>";
   client.println(line);
   client.println("  </head>");
-  client.println("  <body font=\"Arial\" bgcolor=\"cyan\">");
-  client.println("    <h1>CECIL</h1>");
+  client.println("  <body font-family:\"sans-serif\"; bgcolor=\"cyan\">");
+  client.println("    <h1 font-family=\"sans-serif\">CECIL</h1>");
+  return;
+}
+
+/**
+ * sendBody()
+ * 
+ * Sends the HTML for the default CECIL page 
+ */
+void sendBody(WiFiClient client, String program, String memory, String videoOutput, String simStatus)
+{
+  client.println("    <p>Current status of SIM40: <strong>" + simStatus + "</strong></p>");
   client.println("    <section>");
   client.println("      <h2>Program</h2>");
   client.println("      <form action=\"compile\" method=\"get\">");
@@ -67,13 +84,32 @@ void sendHead(WiFiClient client, String program, String memory, String videoOutp
   }
   client.println("      </form>");
   client.println("      <h2>Video Output</h2>");
-  client.println("      <pre><textarea name=\"output\" rows=\"15\" cols=\"48\">");
+  client.println("      <form action=\"clear\" method=\"get\">");
+  client.println("        <pre><textarea name=\"output\" rows=\"15\" cols=\"48\">");
   client.println(videoOutput);
-  client.println("      </textarea></pre>");
+  client.println("        </textarea></pre>");
+  client.println("        <input type=\"submit\" value=\"Clear\">");
+  client.println("      </form>");
   client.println("    </section>");
   return;
 }
 
+/**
+ * sendResponseBody()
+ * 
+ * Sends the body HTML if the SIM status has been changed
+ */
+void sendResponseBody(WiFiClient client, String simStatus){
+  client.println("      <p>Status of SIM40 is now: <strong>" + simStatus + "</p>");
+  client.println("      <p><a href=\"/\"><button>Return</button></a></p>");
+  return;
+}
+
+/**
+ * sendTail()
+ * 
+ * Sends the final HTML to end the page for any web page
+ */
 void sendTail(WiFiClient client)
 {
   // Send the final HTML
@@ -82,8 +118,9 @@ void sendTail(WiFiClient client)
   return;
 }
 
-String serviceWebRequest(WiFiClient client, String program, String memory, String videoOutput, String simStatus)
+String serviceWebRequest(WiFiClient client, String program, String memory, String videoOutput, String oldSimStatus)
 {
+    String simStatus = oldSimStatus;
     Serial.print("New Client: ");           // print a message out the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
     while (client.connected()) {            // loop while the client's connected
@@ -94,18 +131,10 @@ String serviceWebRequest(WiFiClient client, String program, String memory, Strin
 
           if (currentLine.startsWith("Referer:"))Serial.println("Requesting "+ currentLine);
           if (currentLine.startsWith("GET /compile?program="))tidyProgram(currentLine);
-//Serial.println(currentLine);
+//Serial.println(currentLine); // Trace; lets you see what's coming in via the GET parameter
           // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
+          // that's the end of the client HTTP request, so break out & send a response:
           if (currentLine.length() == 0) {
-            // Send the headers
-            sendHead(client, program, memory, videoOutput, simStatus);
-            // the content of the HTTP response follows the header:
-            client.print("Click <a href=\"/H\">here</a> to turn the LED on pin 5 on.<br>");
-            client.print("Click <a href=\"/L\">here</a> to turn the LED on pin 5 off.<br>");
-            sendTail(client);
-            // The HTTP response ends with another blank line:
-            client.println();
             // break out of the while loop:
             break;
           } else {    // if you got a newline, then clear currentLine:
@@ -129,16 +158,33 @@ String serviceWebRequest(WiFiClient client, String program, String memory, Strin
           Serial.println("Terminating program run");
           simStatus = "halted";
         }
-        if (currentLine.endsWith("GET /H")) {
+        if (currentLine.endsWith("GET /clear")) {
+          Serial.println("Clearing output");
+          simStatus = "clear";
+        }
+        /*if (currentLine.endsWith("GET /H")) {
           Serial.println("Turning LED on");
           digitalWrite(BUILTIN_LED, HIGH);               // GET /H turns the LED on
         }
         if (currentLine.endsWith("GET /L")) {
           Serial.println("Turning LED off");
           digitalWrite(BUILTIN_LED, LOW);                // GET /L turns the LED off
-        }
+        }*/
       }
     }
+    // We need to send a response before closing the connection:
+
+    // Send the headers
+    sendHead(client, simStatus);
+    // the content of the HTTP response follows the header:
+    if(simStatus == oldSimStatus)sendBody(client, program, memory, videoOutput, simStatus);
+    /*client.print("Click <a href=\"/H\">here</a> to turn the LED on pin 5 on.<br>");
+      client.print("Click <a href=\"/L\">here</a> to turn the LED on pin 5 off.<br>");*/
+    else sendResponseBody(client, simStatus);
+    // Now round off the HTML
+    sendTail(client);
+    // The HTTP response ends with another blank line:
+    client.println();
     // close the connection:
     client.stop();
     Serial.println("Client Disconnected.");
