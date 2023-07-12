@@ -222,6 +222,9 @@ class compiler
       pass = 2;
     }
    }
+
+    // ** NEED TO SET THE START VECTOR, haven't done this yet ** 
+    
     //int val = pointer-1;
     endLoc = pointer;
     output += "There are "+String(pointer)+" memory locations of code\n";

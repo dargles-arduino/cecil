@@ -41,7 +41,7 @@ typedef struct{
 class sim40
 {
   private:
-  int       memory[1023];
+  int       memory[1024];
   registers regs;
   int       value;
   char      item;
@@ -68,7 +68,9 @@ class sim40
     if(memory[STACK_PTR]<(STACK+STACK_SIZE)){
       if(trace){
         Serial.printf("Pushing %i onto stack\n",value);
+        output += "Pushing " + String(value) + " onto stack\n";
         Serial.printf("Stack pointer is %i\n",memory[STACK_PTR]);
+        output += "Stack pointer is  " + String(memory[STACK_PTR]) + "\n";
       }
       memory[memory[STACK_PTR]] = value;
       memory[STACK_PTR]++;
@@ -76,6 +78,7 @@ class sim40
     }
     else{
       Serial.println("Stack overflow\nRun terminated");
+      output += "Stack overflow\nRun terminated\n";
       running = false;
       return false;
     }
@@ -198,11 +201,26 @@ class sim40
       success = false;
       return success;
     }
-    memory[1023] = address;
+    memory[START_V] = address;
+    output += "Setting start vector to " + String(memory[START_V]) + "\n";
     if(!running)regs.progCounter = address;
     return success;
   }
 
+  /**
+   * beginRun()
+   * 
+   * Make sure everything is set up to start running the SIM code
+   */
+   bool beginRun(){
+    regs.progCounter = memory[START_V];
+    output += "Setting progCounter to " + String(regs.progCounter)+"\n";
+    output += "Start vector is " + String(memory[START_V])+"\n";
+    Serial.println("Setting progCounter to " + String(regs.progCounter));
+    running = true;
+    return true;
+  }
+  
  /**
   * doInstruction
   * 
@@ -215,18 +233,28 @@ class sim40
       case  0: //stop
         running=false;
         Serial.println("Program run concluded");
-        displayRegs();
-        Serial.println("Program memory: ");
-        Serial.println(displayMem(0,24));
+        output += "Program run concluded\n";
+        // The next five! lines are trace, really
+        if(trace){
+          displayRegs();
+          Serial.println("Program memory: ");
+          output += "Program memory:\n";
+          Serial.println(displayMem(0,23));
+          output += displayMem(0, 23) + "\n";
+        }
         break;
       case  1: //load
         regs.acc = memory[memory[regs.progCounter++]];
-        if(trace)Serial.printf("Setting acc to %i\n",regs.acc);
+        if(trace){
+          Serial.printf("Setting acc to %i\n",regs.acc);
+          output += "Setting acc to " + String(regs.acc) + "\n";
+        }
         break;
       case  2: //store
         memory[memory[regs.progCounter]] = regs.acc;
         if(trace){
           Serial.printf("Storing %i in %i\n",regs.acc,memory[regs.progCounter]);
+          output += "Storing "+String(regs.acc)+" in "+String(regs.acc)+"\n";
           //Serial.printf("A: %i, PC: %i, memory[PC]: %i, memory[memory[PC]]: %i\n",regs.acc, regs.progCounter,memory[regs.progCounter],memory[memory[regs.progCounter]] );
         }
         if(memory[regs.progCounter]==1015)output += regs.acc; // video out
@@ -240,7 +268,10 @@ class sim40
           regs.carryFlag = true;
         }
         if(regs.acc==0)regs.zeroFlag=true;
-        if(trace)Serial.printf("acc is now %i\n",regs.acc);
+        if(trace){
+          Serial.printf("acc is now %i\n",regs.acc);
+          output += "acc is now " + String(regs.acc) + "\n";
+        }
         break;
       case  4: //sub
         regs.acc = regs.acc + (memory[memory[regs.progCounter++]] ^ 1023) + regs.carryFlag;
@@ -410,6 +441,7 @@ class sim40
         break;
       case 33: //cclear
         regs.carryFlag=false;
+        if(trace) output += "Setting carry flag to " + String(regs.carryFlag) + "\n";
         break;
       case 37: //printb
         Serial.print(regs.acc, BIN);

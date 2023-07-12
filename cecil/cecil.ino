@@ -102,6 +102,7 @@ void loop() {
     sim.output = "";
     simStatus = prevStatus;
   }
+  if((simStatus == "running") && (prevStatus != "running"))sim.beginRun();
   if(sim.running){
     sim.doInstruction();
     if(!sim.running)simStatus = "halted";
