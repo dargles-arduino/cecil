@@ -46,9 +46,10 @@ void sendHead(WiFiClient client, String simStatus){
   String line = "    <title>";
   line = line + PROG + "</title>";
   client.println(line);
+  client.println("    <style>body{font-family: Arial, Helvetica, sans-serif; background-color: cyan;}</style>");
   client.println("  </head>");
-  client.println("  <body font-family:\"sans-serif\"; bgcolor=\"cyan\">");
-  client.println("    <h1 font-family=\"sans-serif\">CECIL</h1>");
+  client.println("  <body>");
+  client.println("    <h1>CECIL</h1>");
   return;
 }
 
@@ -100,7 +101,7 @@ void sendBody(WiFiClient client, String program, String memory, String videoOutp
  * Sends the body HTML if the SIM status has been changed
  */
 void sendResponseBody(WiFiClient client, String simStatus){
-  client.println("      <p>Status of SIM40 is now: <strong>" + simStatus + "</p>");
+  client.println("      <p>Status of SIM40 is now: <strong>" + simStatus + "</strong></p>");
   client.println("      <p><a href=\"/\"><button>Return</button></a></p>");
   return;
 }

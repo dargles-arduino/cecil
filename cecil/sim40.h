@@ -41,7 +41,10 @@ typedef struct{
 class sim40
 {
   private:
-  int       memory[1024];
+  /* NOTE WELL!! Memory needs to go from 0 - 1023, but it is essential that 
+   * you declare memory[1024] to say you need 1024 spaces! 
+   */
+  int       memory[1024]; 
   registers regs;
   int       value;
   char      item;
@@ -68,9 +71,9 @@ class sim40
     if(memory[STACK_PTR]<(STACK+STACK_SIZE)){
       if(trace){
         Serial.printf("Pushing %i onto stack\n",value);
-        output += "Pushing " + String(value) + " onto stack\n";
+        //output += "Pushing " + String(value) + " onto stack\n";
         Serial.printf("Stack pointer is %i\n",memory[STACK_PTR]);
-        output += "Stack pointer is  " + String(memory[STACK_PTR]) + "\n";
+        //output += "Stack pointer is  " + String(memory[STACK_PTR]) + "\n";
       }
       memory[memory[STACK_PTR]] = value;
       memory[STACK_PTR]++;
@@ -102,6 +105,7 @@ class sim40
     }
     else{
       Serial.println("Stack underflow\nRun terminated");
+      output += "Stack underflow\nRun terminated\n";
       running = false;
     }
     return value;
@@ -202,7 +206,7 @@ class sim40
       return success;
     }
     memory[START_V] = address;
-    output += "Setting start vector to " + String(memory[START_V]) + "\n";
+    //output += "Setting start vector to " + String(memory[START_V]) + "\n";
     if(!running)regs.progCounter = address;
     return success;
   }
@@ -214,50 +218,62 @@ class sim40
    */
    bool beginRun(){
     regs.progCounter = memory[START_V];
-    output += "Setting progCounter to " + String(regs.progCounter)+"\n";
-    output += "Start vector is " + String(memory[START_V])+"\n";
+    //output += "Setting progCounter to " + String(regs.progCounter)+"\n";
+    //output += "Start vector is " + String(memory[START_V])+"\n";
     Serial.println("Setting progCounter to " + String(regs.progCounter));
     running = true;
     return true;
   }
+
+/**  
+ *   videoOut()
+ *   
+ *   Deals with output to the video port
+ */
+void videoOut(String oput){
+  output += oput;
+  // Code to send to screen via I2C needs to go here:
   
+  return;
+}
+ 
  /**
   * doInstruction
   * 
   * Actions the next instruction
   */
   void doInstruction(){
+    char chr;
+    String tmp;
+    
     int instruction = memory[regs.progCounter++];
     if(trace)Serial.printf("Next instruction is %i\n", instruction);
     switch(instruction){
       case  0: //stop
         running=false;
         Serial.println("Program run concluded");
-        output += "Program run concluded\n";
+        videoOut("\n===\nProgram run concluded\n");
         // The next five! lines are trace, really
         if(trace){
           displayRegs();
           Serial.println("Program memory: ");
-          output += "Program memory:\n";
+          //output += "Program memory:\n";
           Serial.println(displayMem(0,23));
-          output += displayMem(0, 23) + "\n";
+          //output += displayMem(0, 23) + "\n";
         }
         break;
       case  1: //load
         regs.acc = memory[memory[regs.progCounter++]];
-        if(trace){
-          Serial.printf("Setting acc to %i\n",regs.acc);
-          output += "Setting acc to " + String(regs.acc) + "\n";
-        }
+        if(trace) Serial.printf("Setting acc to %i\n",regs.acc);
         break;
       case  2: //store
         memory[memory[regs.progCounter]] = regs.acc;
-        if(trace){
-          Serial.printf("Storing %i in %i\n",regs.acc,memory[regs.progCounter]);
-          output += "Storing "+String(regs.acc)+" in "+String(regs.acc)+"\n";
-          //Serial.printf("A: %i, PC: %i, memory[PC]: %i, memory[memory[PC]]: %i\n",regs.acc, regs.progCounter,memory[regs.progCounter],memory[memory[regs.progCounter]] );
+        if(trace) Serial.printf("Storing %i in %i\n",regs.acc,memory[regs.progCounter]);
+        if(memory[regs.progCounter]==1015){
+          chr = regs.acc;
+          tmp = chr;
+          videoOut(tmp); // 1015 is video out port
         }
-        if(memory[regs.progCounter]==1015)output += regs.acc; // video out
         regs.progCounter++;
         break;
       case  3: //add
@@ -270,7 +286,7 @@ class sim40
         if(regs.acc==0)regs.zeroFlag=true;
         if(trace){
           Serial.printf("acc is now %i\n",regs.acc);
-          output += "acc is now " + String(regs.acc) + "\n";
+          //output += "acc is now " + String(regs.acc) + "\n";
         }
         break;
       case  4: //sub
@@ -373,7 +389,7 @@ class sim40
         regs.progCounter++;
         break;
       case 21: //pause
-        value = memory[memory[regs.progCounter++]] * 50;
+        value = memory[memory[regs.progCounter++]] * 100;
         delay(value);
         break;
       case 22: //printd
@@ -441,31 +457,33 @@ class sim40
         break;
       case 33: //cclear
         regs.carryFlag=false;
-        if(trace) output += "Setting carry flag to " + String(regs.carryFlag) + "\n";
+        if(trace) //output += "Setting carry flag to " + String(regs.carryFlag) + "\n";
         break;
       case 37: //printb
         Serial.print(regs.acc, BIN);
-        output += regs.acc;
+        for(int i=9;i>=0;i--)if(bitRead(regs.acc,i))videoOut("1");else videoOut("0");
         break;
       case 38: //print
         Serial.print(regs.acc);
-        output += regs.acc;
+        videoOut(String(regs.acc));
         break;
       case 39: //printch
-        item = regs.acc;
-        Serial.print(item);
-        output += item;
+        chr = regs.acc;
+        if(trace)Serial.print(chr);
+        videoOut(String(chr));
         break;
       case 50: //NOP - but uncomment for stop instead
         //running = false;
         break;
       default:
-        //running=false;
+        videoOut("!!ERROR: unknown program instruction");
+        running=false;
         break;
     }
     
     if(regs.progCounter>1023){
       Serial.println("!!Error: program counter overflow");
+      videoOut("!!ERROR: program counter overflow");
       running=false;
     }
     return;
