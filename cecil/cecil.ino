@@ -14,7 +14,7 @@
 /* Program identification */ 
 #define PROG    "Cecil"
 #define VER     "1.0"
-#define BUILD   "13jul2023 @21:23h"
+#define BUILD   "13jul2023 @23:22h"
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -93,9 +93,9 @@ void loop() {
       // Compilation was successful
       Serial.println("Compiled successfully");
       if(!sim.loadMem(Compiler.startLoc, Compiler.code , Compiler.endLoc)) Serial.println("Oops! Memory write failed");
-      sim.output += Compiler.output;
     }
     else Serial.println("Failed to compile");
+    sim.output += Compiler.output;
     simStatus = "halted";
   }
   if(simStatus=="clear"){

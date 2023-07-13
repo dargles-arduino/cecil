@@ -225,11 +225,14 @@ class compiler
 
     // ** NEED TO SET THE START VECTOR, haven't done this yet ** 
     
-    //int val = pointer-1;
-    endLoc = pointer;
-    output += "There are "+String(pointer)+" memory locations of code\n";
-    output += "Code block is:\n";
-    for(int i=0;i<pointer;i++)output += String(code[i])+" ";
+    if(success){
+      endLoc = pointer;
+      output += "There are "+String(pointer)+" memory locations of code\n";
+      output += "Code block is:\n";
+      output += "==Program compiled==\n";
+      for(int i=0;i<pointer;i++)output += String(code[i])+" ";      
+    }
+    else output += "Errors found\n++Program FAILED to compile++\n";
     Serial.println("===\nOutput:\n" + output); // TRACE   
     return(success);
  }
