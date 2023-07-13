@@ -30,7 +30,7 @@ void tidyProgram(String program){
  * Sends the HTTP headers and initial HTML that applies for any page we might 
  * wish to return to the requester.
  */
-void sendHead(WiFiClient client, String simStatus){
+void sendHead(WiFiClient client, String simStatus, bool redirect){
   // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
   // and a content-type so the client knows what's coming, then a blank line:
   client.println("HTTP/1.1 200 OK");
@@ -43,6 +43,7 @@ void sendHead(WiFiClient client, String simStatus){
   client.println("  <head>");
   client.println("    <meta charset=\"UTF-8\">");
   client.println("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
+  if(redirect) client.println("    <meta http-equiv=\"refresh\" content=\"3; url='/'\">");
   String line = "    <title>";
   line = line + PROG + "</title>";
   client.println(line);
@@ -102,7 +103,8 @@ void sendBody(WiFiClient client, String program, String memory, String videoOutp
  */
 void sendResponseBody(WiFiClient client, String simStatus){
   client.println("      <p>Status of SIM40 is now: <strong>" + simStatus + "</strong></p>");
-  client.println("      <p><a href=\"/\"><button>Return</button></a></p>");
+  client.println("      <p>Returning to main page shortly</p>");
+  client.println("      <p>Or <a href=\"/\"><button>Return</button></a> manually</p>");
   return;
 }
 
@@ -175,13 +177,17 @@ String serviceWebRequest(WiFiClient client, String program, String memory, Strin
     }
     // We need to send a response before closing the connection:
 
-    // Send the headers
-    sendHead(client, simStatus);
-    // the content of the HTTP response follows the header:
-    if(simStatus == oldSimStatus)sendBody(client, program, memory, videoOutput, simStatus);
-    /*client.print("Click <a href=\"/H\">here</a> to turn the LED on pin 5 on.<br>");
-      client.print("Click <a href=\"/L\">here</a> to turn the LED on pin 5 off.<br>");*/
-    else sendResponseBody(client, simStatus);
+    // Send the headers, then the content of the HTTP response
+    // If there's no status change, we want the default page
+    if(simStatus == oldSimStatus){
+     sendHead(client, simStatus, false); // Don't redirect
+     sendBody(client, program, memory, videoOutput, simStatus);
+    }
+    // But if there's a status change, we want to acknowledge the action, then redirect
+    else{
+     sendHead(client, simStatus, true); // Do redirect after 3 seconds
+     sendResponseBody(client, simStatus);
+    }
     // Now round off the HTML
     sendTail(client);
     // The HTTP response ends with another blank line:

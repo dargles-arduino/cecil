@@ -14,7 +14,7 @@
 /* Program identification */ 
 #define PROG    "Cecil"
 #define VER     "1.0"
-#define BUILD   "13jul2023 @00:46h"
+#define BUILD   "13jul2023 @21:23h"
 
 /* Necessary includes */
 #include "flashscreen.h"
