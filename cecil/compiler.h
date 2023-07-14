@@ -229,8 +229,8 @@ class compiler
       endLoc = pointer;
       output += "There are "+String(pointer)+" memory locations of code\n";
       output += "Code block is:\n";
-      output += "==Program compiled==\n";
       for(int i=0;i<pointer;i++)output += String(code[i])+" ";      
+      output += "\n==Program compiled==\n";
     }
     else output += "Errors found\n++Program FAILED to compile++\n";
     Serial.println("===\nOutput:\n" + output); // TRACE   

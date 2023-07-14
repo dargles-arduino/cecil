@@ -476,7 +476,8 @@ void videoOut(String oput){
         //running = false;
         break;
       default:
-        videoOut("!!ERROR: unknown program instruction");
+        tmp = "!!ERROR: unknown program instruction: "+String(instruction);
+        videoOut(tmp);
         running=false;
         break;
     }
