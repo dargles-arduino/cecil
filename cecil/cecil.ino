@@ -38,6 +38,7 @@ sim40       sim;
 compiler    Compiler;
 int         values[] = {1,11,37,32,31,37,0,2,38,5,3,523,65,66,23,0}; // Note: this is a program to add 2 nos.
 int         valuesSize;
+int         sv;  // For temporary startVector
 
 void setup() {
   // Start up the serial output port
@@ -89,9 +90,10 @@ void loop() {
     //Serial.println("Updated program is:");
     //Serial.println(progUpdate);
     Compiler.program = progUpdate;
-    if(Compiler.compile()){
+    if((sv=Compiler.compile(sim.getStartVector()))!=-1){
       // Compilation was successful
       Serial.println("Compiled successfully");
+      sim.setStartVector(sv);
       if(!sim.loadMem(Compiler.startLoc, Compiler.code , Compiler.endLoc)) Serial.println("Oops! Memory write failed");
     }
     else Serial.println("Failed to compile");

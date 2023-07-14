@@ -41,7 +41,7 @@ class compiler
   compiler(){
     program =  "program example\n";
     program += "author  David Argles\n";
-    program += "date    20.08.01\n";
+    program += "date    14.07.23\n";
     program += ";---program starts here---\n";
     program += ".start  load    data1\n";
     program += "        cclear\n";
@@ -133,7 +133,7 @@ class compiler
     return location;
   }
 
-  bool compile(){
+  int compile(int startVec){
     input = program;
     labelPtr = 0;   // i.e. reset the label table
     output = "\n===\nStarting compiler...\n";
@@ -142,6 +142,7 @@ class compiler
     bool success = true;
     compiled = false;
     int   instruction;
+    int   startVector = startVec;
 
    for(int pass=1;pass<3;pass++){
     if(pass == 2){
@@ -183,6 +184,8 @@ class compiler
         // Enter the label into the table
         labelNames[labelPtr] = nextOne;
         labelLocs[labelPtr++] = pointer;
+        // If label = "start", reset the start vector
+        if(nextOne == "start")startVector = pointer;
         nextOne = getWord();
       }
       // We should now have a command
@@ -232,8 +235,11 @@ class compiler
       for(int i=0;i<pointer;i++)output += String(code[i])+" ";      
       output += "\n==Program compiled==\n";
     }
-    else output += "Errors found\n++Program FAILED to compile++\n";
+    else{
+      output += "Errors found\n++Program FAILED to compile++\n";
+      startVector = -1;
+    }
     Serial.println("===\nOutput:\n" + output); // TRACE   
-    return(success);
+    return(startVector);
  }
 };

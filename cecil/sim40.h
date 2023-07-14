@@ -81,7 +81,7 @@ class sim40
     }
     else{
       Serial.println("Stack overflow\nRun terminated");
-      output += "Stack overflow\nRun terminated\n";
+      output += "!!RUN ERROR: Stack overflow\n";
       running = false;
       return false;
     }
@@ -105,7 +105,7 @@ class sim40
     }
     else{
       Serial.println("Stack underflow\nRun terminated");
-      output += "Stack underflow\nRun terminated\n";
+      output += "!!RUN ERROR: Stack underflow\n";
       running = false;
     }
     return value;
@@ -211,6 +211,17 @@ class sim40
     return success;
   }
 
+ /**
+  * getStartVector
+  * 
+  * Sets the startVector to the given value
+  * @param  int  address
+  * @return bool success
+  */
+  int getStartVector(){
+    return(memory[START_V]);
+  }
+  
   /**
    * beginRun()
    * 
@@ -476,7 +487,7 @@ void videoOut(String oput){
         //running = false;
         break;
       default:
-        tmp = "!!ERROR: unknown program instruction: "+String(instruction);
+        tmp = "!!RUN ERROR: unknown program instruction: "+String(instruction);
         videoOut(tmp);
         running=false;
         break;
@@ -484,7 +495,7 @@ void videoOut(String oput){
     
     if(regs.progCounter>1023){
       Serial.println("!!Error: program counter overflow");
-      videoOut("!!ERROR: program counter overflow");
+      videoOut("!!RUN ERROR: program counter overflow");
       running=false;
     }
     return;
