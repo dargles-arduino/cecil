@@ -48,10 +48,10 @@ class sim40
   registers regs;
   int       value;
   char      item;
-  
+  char      buff[5];
+  bool      simRunning = false;
   
   public:
-  bool      running = false;
   bool      trace = true;
   String    output = "";
 
@@ -82,7 +82,7 @@ class sim40
     else{
       Serial.println("Stack overflow\nRun terminated");
       output += "!!RUN ERROR: Stack overflow\n";
-      running = false;
+      simRunning = false;
       return false;
     }
     return true;
@@ -106,7 +106,7 @@ class sim40
     else{
       Serial.println("Stack underflow\nRun terminated");
       output += "!!RUN ERROR: Stack underflow\n";
-      running = false;
+      simRunning = false;
     }
     return value;
    }
@@ -155,7 +155,6 @@ class sim40
      // We're clear to go
      int  pointer = startAddress;
      int  counter = 0;
-     char buff[5];
      int  itemsOnLine = 0;
      while(pointer<=endAddress){
        sprintf(buff," %04d", memory[pointer++]);
@@ -178,17 +177,38 @@ class sim40
    * 
    * displayRegs displays values in the sim40 registers.
    */
-   void displayRegs(){
-     Serial.printf("\nAccumulator:   %04d",regs.acc);
+   String getRegs(){
+     String op = "";
+     sprintf(buff," %04d", regs.acc);
+     op += "Accumulator:  ";
+     op += buff;
      Serial.printf("\nX Register:    %04d",regs.xReg);
+     sprintf(buff," %04d", regs.xReg);
+     op += "\nX Register:   ";
+     op += buff;
      Serial.printf("\nY Register:    %04d",regs.yReg);
+     sprintf(buff," %04d", regs.yReg);
+     op += "\nY Register:   ";
+     op += buff;
      Serial.printf("\nProg Counter:  %04d",regs.progCounter);
+     sprintf(buff," %04d", regs.progCounter);
+     op += "\nProg Counter: ";
+     op += buff;
      Serial.printf("\nZero Flag:     %i",regs.zeroFlag);
+     sprintf(buff," %04d", regs.zeroFlag);
+     op += "\nZero Flag:    ";
+     op += buff;
      Serial.printf("\nNegative Flag: %i",regs.negFlag);
+     sprintf(buff," %04d", regs.negFlag);
+     op += "\nNegative Flag:";
+     op += buff;
      Serial.printf("\nCarry Flag:    %i\n",regs.carryFlag);
+     sprintf(buff," %04d", regs.carryFlag);
+     op += "\nCarry Flag:   ";
+     op += buff;
      Serial.println("Stack:");
      //Serial.println(displayMem(908,1007));
-     return;
+     return op;
    }
    
  /**
@@ -207,8 +227,20 @@ class sim40
     }
     memory[START_V] = address;
     //output += "Setting start vector to " + String(memory[START_V]) + "\n";
-    if(!running)regs.progCounter = address;
+    if(!simRunning)regs.progCounter = address;
     return success;
+  }
+
+  void setRunStatus(bool sRunning)
+  {
+    simRunning = sRunning;
+    Serial.printf("simRunning now set to: %i", simRunning);
+    return;
+  }
+
+  bool getRunStatus()
+  {
+    return simRunning;
   }
 
  /**
@@ -232,7 +264,7 @@ class sim40
     //output += "Setting progCounter to " + String(regs.progCounter)+"\n";
     //output += "Start vector is " + String(memory[START_V])+"\n";
     Serial.println("Setting progCounter to " + String(regs.progCounter));
-    running = true;
+    simRunning = true;
     return true;
   }
 
@@ -256,17 +288,18 @@ void videoOut(String oput){
   void doInstruction(){
     char chr;
     String tmp;
-    
+
+    //Serial.println("Doing next instruction...");
     int instruction = memory[regs.progCounter++];
     if(trace)Serial.printf("Next instruction is %i\n", instruction);
     switch(instruction){
       case  0: //stop
-        running=false;
+        simRunning=false;
         Serial.println("Program run concluded");
         videoOut("\n===\nProgram run concluded\n");
         // The next five! lines are trace, really
         if(trace){
-          displayRegs();
+          //displayRegs();
           Serial.println("Program memory: ");
           //output += "Program memory:\n";
           Serial.println(displayMem(0,23));
@@ -489,15 +522,16 @@ void videoOut(String oput){
       default:
         tmp = "!!RUN ERROR: unknown program instruction: "+String(instruction);
         videoOut(tmp);
-        running=false;
+        simRunning=false;
         break;
     }
     
     if(regs.progCounter>1023){
       Serial.println("!!Error: program counter overflow");
       videoOut("!!RUN ERROR: program counter overflow");
-      running=false;
+      simRunning=false;
     }
+    Serial.println("Instruction completed");
     return;
   }
 };

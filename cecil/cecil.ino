@@ -14,7 +14,10 @@
 /* Program identification */ 
 #define PROG    "Cecil"
 #define VER     "1.0"
-#define BUILD   "14jul2023 @10:24h"
+#define BUILD   "22jul2023 @15:10h"
+
+bool    trace = true; // To be truly global, this needs to come here
+//bool    tmpBool;
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -32,8 +35,8 @@ long int baudrate = 115200;     // Baudrate for serial output
 bool        InetConnected;
 WiFiServer  server(80);
 WiFiClient  client;
-String      simStatus = "halted"; // halted/compiling/running; can be clear temporarily, just to get the info around
-String      prevStatus = "halted";
+String      webCommand = "none"; // none/halt/compile/run/clear; to get the info around
+String      prevWebCommand = "none";
 sim40       sim;
 compiler    Compiler;
 int         values[] = {1,11,37,32,31,37,0,2,38,5,3,523,65,66,23,0}; // Note: this is a program to add 2 nos.
@@ -68,29 +71,41 @@ void setup() {
   if(!sim.loadMem(0,values, valuesSize)) Serial.println("Oops! Memory write failed");
   Serial.println(sim.displayMem(0,valuesSize));
   sim.setStartVector(0);
-  sim.running=true;
-  simStatus = "running";
+  sim.setRunStatus(true);
+  //simStatus = "running";
 }
 
-void loop() {
+void loop() 
+{
   // put your main code here, to run repeatedly:
-  if(simStatus != prevStatus){
-    Serial.println("Sim status: "+simStatus);
+  //Serial.print("Sim status: ");
+  //Serial.println(simStatus);
+  /*if(simStatus != prevStatus)
+  {
+    if(trace)Serial.println("Sim status changed, now: "+simStatus);
     prevStatus = simStatus;
-  }
-  
+  }*/
+  webCommand = "none";
   // check for incoming web clients
   client = server.available();
-  if(client) {
-    String memDump = sim.displayMem(0, Compiler.endLoc);
-    simStatus = serviceWebRequest(client, Compiler.program, memDump, sim.output, simStatus);
+  if(client) 
+  {
+    Serial.printf("sim.running is: %i", sim.getRunStatus());
+    String memDump = sim.displayMem(0, 23);
+    String regs = sim.getRegs();
+    webCommand = serviceWebRequest(client, Compiler.program, memDump, regs, sim.output, sim.getRunStatus());
+    Serial.printf("webCommand set by web client, now= %s\n",webCommand);
+    Serial.printf("And sim.running is: %i", sim.getRunStatus());
   }
-
-  if(simStatus=="compiling"){
+  client.stop();
+  
+  if(webCommand=="compile")
+  {
     //Serial.println("Updated program is:");
     //Serial.println(progUpdate);
     Compiler.program = progUpdate;
-    if((sv=Compiler.compile(sim.getStartVector()))!=-1){
+    if((sv=Compiler.compile(sim.getStartVector()))!=-1)
+    {
       // Compilation was successful
       Serial.println("Compiled successfully");
       sim.setStartVector(sv);
@@ -98,17 +113,28 @@ void loop() {
     }
     else Serial.println("Failed to compile");
     sim.output += Compiler.output;
-    simStatus = "halted";
+    sim.setRunStatus(false);
   }
-  if(simStatus=="clear"){
+  if(webCommand=="clear")
+  {
     sim.output = "";
-    simStatus = prevStatus;
+    webCmd = "none";
   }
-  if((simStatus == "running") && (prevStatus != "running"))sim.beginRun();
-  if(sim.running){
+  if(webCommand == "run")
+  {
+    sim.setRunStatus(sim.beginRun());
+    Serial.printf("sim.getRunStatus() is now: %i\n", sim.getRunStatus());
+  }
+  if(webCommand == "halt")
+  {
+    sim.setRunStatus(false);
+    Serial.printf("sim.getRunStatus() is now: %i\n", sim.getRunStatus());
+  }
+  //Serial.printf("sim.getRunStatus() is: %i\n", sim.getRunStatus());
+  while(sim.getRunStatus())
+  {
     sim.doInstruction();
-    if(!sim.running)simStatus = "halted";
+    //if(!sim.getRunStatus())simStatus = "halted";
   }
-
   delay(100);
 }

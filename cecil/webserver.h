@@ -9,6 +9,8 @@
  */
 
 String  progUpdate = "";
+//bool    trace = true;
+String  webCmd;
 
 void tidyProgram(String program){
   int ptr;
@@ -30,7 +32,7 @@ void tidyProgram(String program){
  * Sends the HTTP headers and initial HTML that applies for any page we might 
  * wish to return to the requester.
  */
-void sendHead(WiFiClient client, String simStatus, bool redirect){
+void sendHead(WiFiClient client, bool simStatus, bool redirect){
   // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
   // and a content-type so the client knows what's coming, then a blank line:
   client.println("HTTP/1.1 200 OK");
@@ -59,9 +61,12 @@ void sendHead(WiFiClient client, String simStatus, bool redirect){
  * 
  * Sends the HTML for the default CECIL page 
  */
-void sendBody(WiFiClient client, String program, String memory, String videoOutput, String simStatus)
+void sendBody(WiFiClient client, String program, String memory, String registers, String videoOutput, bool simStatus)
 {
-  client.println("    <p>Current status of SIM40: <strong>" + simStatus + "</strong></p>");
+  client.print("    <p>Current status of SIM40: <strong>");
+  if(simStatus)client.print("running");
+  else client.print("halted");
+  client.println("</strong></p>");
   client.println("    <section>");
   client.println("      <h2>Program</h2>");
   client.println("      <form action=\"compile\" method=\"get\">");
@@ -73,10 +78,15 @@ void sendBody(WiFiClient client, String program, String memory, String videoOutp
   client.println("    </section>");
   client.println("    <section>");
   client.println("      <h2>Memory</h2>");
+  client.println("      <h3>Main SIM memory</h3>");
   client.println("      <pre><textarea name=\"code\" rows=\"5\" cols=\"48\">");
   client.println(memory);
   client.println("      </textarea></pre>");
-  if(simStatus != "halted"){
+  client.println("      <h3>Registers</h3>");
+  client.println("      <pre><textarea name=\"code\" rows=\"8\" cols=\"48\">");
+  client.println(registers);
+  client.println("      </textarea></pre>");
+  if(simStatus){
     client.println("      <form action=\"halt\" method=\"get\">");
     client.println("        <input type=\"submit\" value=\"Halt\">");
   }
@@ -101,8 +111,11 @@ void sendBody(WiFiClient client, String program, String memory, String videoOutp
  * 
  * Sends the body HTML if the SIM status has been changed
  */
-void sendResponseBody(WiFiClient client, String simStatus){
-  client.println("      <p>Status of SIM40 is now: <strong>" + simStatus + "</strong></p>");
+void sendResponseBody(WiFiClient client, bool simStatus){
+  client.println("      <p>Status of SIM40 is now: <strong>");
+  if(simStatus)client.print("running");
+  else client.print("halted");
+  client.println("</strong></p>");
   client.println("      <p>Returning to main page shortly</p>");
   client.println("      <p>Or <a href=\"/\"><button>Return</button></a> manually</p>");
   return;
@@ -121,15 +134,15 @@ void sendTail(WiFiClient client)
   return;
 }
 
-String serviceWebRequest(WiFiClient client, String program, String memory, String videoOutput, String oldSimStatus)
+String serviceWebRequest(WiFiClient client, String program, String memory, String registers, String videoOutput, bool simStatus)
 {
-    String simStatus = oldSimStatus;
-    Serial.print("New Client: ");           // print a message out the serial port
+    webCmd = "none";
+    if(trace)Serial.print("Servicing new client: ");           // print a message out the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
     while (client.connected()) {            // loop while the client's connected
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
-        //Serial.write(c);                    // print it out the serial monitor
+        if(trace)Serial.write(c);           // print it out the serial monitor
         if (c == '\n') {                    // if the byte is a newline character
 
           if (currentLine.startsWith("Referer:"))Serial.println("Requesting "+ currentLine);
@@ -146,44 +159,35 @@ String serviceWebRequest(WiFiClient client, String program, String memory, Strin
         } else if (c != '\r') {  // if you got anything else but a carriage return character,
           currentLine += c;      // add it to the end of the currentLine
         }
-
-        // Check to see if the client request was "GET /H" or "GET /L":
+        // Check to see what the client is requesting:
         if (currentLine.endsWith("GET /compile")) {
-          Serial.println("Starting compilation");
+          Serial.println("\nStarting compilation");
           tidyProgram(currentLine);
-          simStatus = "compiling";
+          webCmd = "compile";
         }
         if (currentLine.endsWith("GET /run")) {
-          Serial.println("Beginning program run");
-          simStatus = "running";
+          Serial.println("\nBeginning program run");
+          webCmd = "run";
         }
         if (currentLine.endsWith("GET /halt")) {
-          Serial.println("Terminating program run");
-          simStatus = "halted";
+          Serial.println("\nTerminating program run");
+          webCmd = "halt";
         }
         if (currentLine.endsWith("GET /clear")) {
-          Serial.println("Clearing output");
-          simStatus = "clear";
+          Serial.println("\nClearing output");
+          webCmd = "clear";
         }
-        /*if (currentLine.endsWith("GET /H")) {
-          Serial.println("Turning LED on");
-          digitalWrite(BUILTIN_LED, HIGH);               // GET /H turns the LED on
-        }
-        if (currentLine.endsWith("GET /L")) {
-          Serial.println("Turning LED off");
-          digitalWrite(BUILTIN_LED, LOW);                // GET /L turns the LED off
-        }*/
       }
     }
     // We need to send a response before closing the connection:
 
     // Send the headers, then the content of the HTTP response
-    // If there's no status change, we want the default page
-    if(simStatus == oldSimStatus){
+    // If there's no button pressed, we want the default page
+    if(webCmd == "none"){
      sendHead(client, simStatus, false); // Don't redirect
-     sendBody(client, program, memory, videoOutput, simStatus);
+     sendBody(client, program, memory, registers, videoOutput, simStatus);
     }
-    // But if there's a status change, we want to acknowledge the action, then redirect
+    // But if a button's been pressed, we want to acknowledge the action, then redirect
     else{
      sendHead(client, simStatus, true); // Do redirect after 3 seconds
      sendResponseBody(client, simStatus);
@@ -195,5 +199,5 @@ String serviceWebRequest(WiFiClient client, String program, String memory, Strin
     // close the connection:
     client.stop();
     Serial.println("Client Disconnected.");
-    return simStatus;
+    return webCmd;
 }
